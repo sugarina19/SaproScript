@@ -1,0 +1,1067 @@
+---
+title: "SLE777 Bioinformatics Assignment 4"
+author: "Irena Sugiarto (225545617)"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: 
+    toc: true
+    toc_depth: 3
+    latex_engine: xelatex
+  html_document: 
+    theme: cerulean
+    toc: true
+    toc_float: true
+# bibliography: references.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(comment = NA, echo = TRUE, warning = FALSE, message = FALSE, fig.align = "center")
+
+# Initialize figure and table counters
+fig_num <- 0
+table_num <- 0
+
+# Save original working directory
+original_wd <- getwd()
+```
+
+***
+# Part 1: Data Wrangling and Analysis
+***
+
+Set working directory and create data folder if it doesn't exist
+```{r}
+if (!dir.exists("part1/data")) {
+  dir.create("part1/data")
+}
+```
+
+Download data files if they don't exist
+```{r}
+if (!file.exists("part1/data/gene_expression.tsv")) {
+  download.file("https://raw.githubusercontent.com/ghazkha/Assessment4/main/gene_expression.tsv", 
+                "part1/data/gene_expression.tsv")
+}
+
+if (!file.exists("part1/data/growth_data.csv")) {
+  download.file("https://raw.githubusercontent.com/ghazkha/Assessment4/main/growth_data.csv", 
+                "part1/data/growth_data.csv")
+}
+```
+
+## GENE EXPRESSION ANALYSIS (Questions 1-5)
+The file “gene_expression.tsv” contains RNA-seq count data for three samples of interest.
+
+### Question 1
+Import RNA-seq data and display first six genes
+```{r}
+# Read in gene expression file with gene identifiers as row names
+gene_expr <- read.delim("part1/data/gene_expression.tsv", 
+                        row.names = 1,  # First column as row names
+                        header = TRUE)
+# Display first 6 genes
+table_num <- table_num + 1
+```
+**Table `r table_num`: First six genes in the gene expression dataset**
+```{r}
+head(gene_expr)
+```
+
+### Question 2
+Add mean expression column and display first six genes
+```{r}
+# Create new column with mean of other columns
+gene_expr$mean_expression <- rowMeans(gene_expr)
+# Display first 6 genes with mean
+table_num <- table_num + 1
+```
+**Table `r table_num`: Gene expression data with mean values**
+```{r}
+head(gene_expr)
+```
+
+### Question 3
+Identify top 10 genes with highest mean expression
+```{r}
+# Find 10 genes with highest mean expression
+top_10_genes <- gene_expr[order(gene_expr$mean_expression, decreasing = TRUE), ][1:10, ]
+# Display top 10 genes
+table_num <- table_num + 1
+```
+**Table `r table_num`: Top 10 genes with highest mean expression**
+```{r}
+top_10_genes
+```
+
+### Question 4
+Count number of genes with mean expression < 10
+```{r}
+# Count genes with mean expression < 10
+low_expr_count <- sum(gene_expr$mean_expression < 10)
+```
+**Result:** There are `r low_expr_count` genes with mean expression < 10.
+
+### Question 5
+Plot histogram of mean gene expression values
+```{r}
+# Create histogram of mean values
+fig_num <- fig_num + 1
+hist(gene_expr$mean_expression, 
+     breaks = 1000,
+     main = paste0("Figure ", fig_num, ": Distribution of Mean Gene Expression"),
+     xlab = "Mean Expression Level",
+     ylab = "Frequency",
+     xlim = c(0,30000),
+     col = "skyblue",
+     border = "black")
+```
+The distribution shows that most genes have relatively low expression levels, with a long right tail indicating a smaller number of highly expressed genes.
+
+## GROWTH DATA ANALYSIS (Questions 6-10)
+The file “growth_data.csv” contains measurements for tree circumference growing at two sites, northeast site and southwest site which were planted 20 years ago.
+
+### Question 6
+Import tree growth data and check column names
+```{r}
+# Import CSV file
+growth_data <- read.csv("part1/data/growth_data.csv", header = TRUE)
+# Column names in growth data:
+table_num <- table_num + 1
+```
+**Column names:** `r colnames(growth_data)`\\
+**Table `r table_num`: First few rows of growth data**
+```{r}
+head(growth_data)
+```
+
+### Question 7
+Calculate mean and standard deviation of tree circumference by site and time
+```{r}
+# Extract data by site: northeast and southwest
+northeast_data <- growth_data[growth_data$Site == "northeast", ]
+southwest_data <- growth_data[growth_data$Site == "southwest", ]
+
+# Calculate statistics for northeast site
+northeast_mean_start <- mean(northeast_data$Circumf_2005_cm, na.rm = TRUE)
+northeast_sd_start <- sd(northeast_data$Circumf_2005_cm, na.rm = TRUE)
+northeast_mean_end <- mean(northeast_data$Circumf_2020_cm, na.rm = TRUE)
+northeast_sd_end <- sd(northeast_data$Circumf_2020_cm, na.rm = TRUE)
+
+# Calculate statistics for southwest site
+southwest_mean_start <- mean(southwest_data$Circumf_2005_cm, na.rm = TRUE)
+southwest_sd_start <- sd(southwest_data$Circumf_2005_cm, na.rm = TRUE)
+southwest_mean_end <- mean(southwest_data$Circumf_2020_cm, na.rm = TRUE)
+southwest_sd_end <- sd(southwest_data$Circumf_2020_cm, na.rm = TRUE)
+
+# Create summary statistics table
+summary_stats <- data.frame(
+  Site = c("Northeast", "Southwest"),
+  Mean_Start = c(northeast_mean_start, southwest_mean_start),
+  SD_Start = c(northeast_sd_start, southwest_sd_start),
+  Mean_End = c(northeast_mean_end, southwest_mean_end),
+  SD_End = c(northeast_sd_end, southwest_sd_end)
+)
+table_num <- table_num + 1
+```
+**Table `r table_num`: Summary statistics of tree circumference by site and time point**
+```{r}
+summary_stats
+```
+
+### Question 8
+Create box plot of tree circumference at start and end by site
+```{r}
+# Prepare data for boxplot
+northeast_start <- growth_data$Circumf_2005_cm[growth_data$Site == "northeast"]
+northeast_end <- growth_data$Circumf_2020_cm[growth_data$Site == "northeast"]
+southwest_start <- growth_data$Circumf_2005_cm[growth_data$Site == "southwest"]
+southwest_end <- growth_data$Circumf_2020_cm[growth_data$Site == "southwest"]
+
+# Create boxplot
+fig_num <- fig_num + 1
+boxplot(northeast_start, northeast_end, southwest_start, southwest_end,
+        names = c("Northeast\nStart", "Northeast\nEnd", "Southwest\nStart", "Southwest\nEnd"),
+        main = paste0("Figure ", fig_num, ": Tree Circumference by Site and Time Point"),
+        xlab = "Site and Time Point",
+        ylab = "Circumference (cm)",
+        col = c("lightcoral", "lightblue", "lightcoral", "lightblue"),
+        border = "black")
+
+# Add a legend
+legend("topleft", 
+       legend = c("Start", "End"), 
+       fill = c("lightcoral", "lightblue"),
+       title = "Time Point")
+```
+The boxplot suggests Northeast may provide slightly better growing conditions, but the effect appears modest given the substantial overlap between the two distributions.
+
+### Question 9
+Calculate mean growth over last 10 years at each site
+```{r}
+# Calculate growth for each tree
+growth_data$growth_10years <- growth_data$Circumf_2020_cm - growth_data$Circumf_2010_cm
+
+# Calculate mean growth by site
+northeast_growth_data <- growth_data$growth_10years[growth_data$Site == "northeast"]
+southwest_growth_data <- growth_data$growth_10years[growth_data$Site == "southwest"]
+
+# Calculate statistics
+northeast_mean_growth <- mean(northeast_growth_data, na.rm = TRUE)
+northeast_sd_growth <- sd(northeast_growth_data, na.rm = TRUE)
+northeast_n <- length(northeast_growth_data[!is.na(northeast_growth_data)])
+
+southwest_mean_growth <- mean(southwest_growth_data, na.rm = TRUE)
+southwest_sd_growth <- sd(southwest_growth_data, na.rm = TRUE)
+southwest_n <- length(southwest_growth_data[!is.na(southwest_growth_data)])
+
+# Create growth summary table
+growth_summary <- data.frame(
+  Site = c("Northeast", "Southwest"),
+  Mean_Growth = c(northeast_mean_growth, southwest_mean_growth),
+  SD_Growth = c(northeast_sd_growth, southwest_sd_growth),
+  N_Trees = c(northeast_n, southwest_n)
+)
+table_num <- table_num + 1
+```
+**Table `r table_num`: Mean growth over 10 years by site**
+```{r}
+growth_summary
+```
+
+### Question 10
+Perform t-test to compare 10-year growth between sites
+```{r}
+# Extract growth data for each site (remove NAs)
+northeast_growth <- northeast_growth_data[!is.na(northeast_growth_data)]
+southwest_growth <- southwest_growth_data[!is.na(southwest_growth_data)]
+
+# Perform t-test
+t_test_result <- t.test(northeast_growth, southwest_growth)
+
+# Extract results
+p_value <- t_test_result$p.value
+conf_int <- t_test_result$conf.int
+```
+
+**T-test results:**
+
+- **p-value:** `r format(p_value, digits = 3)`
+- **95% Confidence Interval:** [`r format(conf_int[1], digits = 3)`, `r format(conf_int[2], digits = 3)`]
+- **Conclusion:** `r if(p_value < 0.05) "There is a statistically significant difference in growth between the two sites (p < 0.05)." else "There is no statistically significant difference in growth between the two sites (p ≥ 0.05)."`
+
+***
+# Part 2: Comparative Genomics Analysis
+***
+SaproScript - Comparing E. coli vs Saprospirales bacterium (GCA_003448025)
+
+Loading library
+```{r}
+library("R.utils")
+library("seqinr")
+```
+
+Setup and data download
+```{r}
+# Create genomic_data folder if it doesn't exist
+if (!dir.exists("part2/genomic_data")) {
+  dir.create("part2/genomic_data")
+}
+
+# Set working directory for downloading
+setwd("part2/genomic_data")
+
+# Download E. coli CDS if it doesn't exist
+if (!file.exists("ecoli_cds.fa")) {
+  ecoli_url <- "https://ftp.ensemblgenomes.ebi.ac.uk/pub/bacteria/release-62/fasta/bacteria_0_collection/escherichia_coli_str_k_12_substr_mg1655_gca_000005845/cds/Escherichia_coli_str_k_12_substr_mg1655_gca_000005845.ASM584v2.cds.all.fa.gz"
+  download.file(ecoli_url, destfile = "ecoli_cds.fa.gz")
+  gunzip("ecoli_cds.fa.gz")
+}
+
+# Download Saprospirales CDS if it doesn't exist
+if (!file.exists("sapro_cds.fa")) {
+  sapro_url <- "https://ftp.ensemblgenomes.ebi.ac.uk/pub/bacteria/release-62/fasta/bacteria_58_collection/saprospirales_bacterium_gca_003448025/cds/Saprospirales_bacterium_gca_003448025.ASM344802v1.cds.all.fa.gz"
+  download.file(sapro_url, destfile = "sapro_cds.fa.gz")
+  gunzip("sapro_cds.fa.gz")
+}
+
+# Return to parent directory
+setwd("..")
+```
+
+Read FASTA files
+```{r}
+# Read E. coli CDS sequences
+cds_ecoli <- read.fasta("part2/genomic_data/ecoli_cds.fa")
+
+# Read Saprospirales bacterium CDS sequences
+cds_sapro <- read.fasta("part2/genomic_data/sapro_cds.fa")
+```
+
+### Question 1
+Count number of CDS in both organisms
+```{r}
+# Count coding sequences
+ecoli_cds_count <- length(cds_ecoli)
+sapro_cds_count <- length(cds_sapro)
+
+# Create comparison table
+cds_count_table <- data.frame(
+  Organism = c("E. coli", "Saprospirales bacterium"),
+  CDS_Count = c(ecoli_cds_count, sapro_cds_count)
+)
+table_num <- table_num + 1
+```
+**Table `r table_num`: Number of coding sequences in each organism**
+```{r}
+cds_count_table
+```
+
+E. coli contains `r abs(ecoli_cds_count - sapro_cds_count)` `r if(ecoli_cds_count > sapro_cds_count) "more" else "fewer"` coding sequences than Saprospirales bacterium. This difference may reflect variations in genome complexity, with larger genomes typically encoding more metabolic capabilities and regulatory systems.
+
+### Question 2
+Calculate total coding DNA length for both organisms
+```{r}
+# Calculate total length for each organism
+ecoli_total_bp <- sum(sapply(cds_ecoli, length))
+sapro_total_bp <- sum(sapply(cds_sapro, length))
+
+# Create comparison table
+total_dna_table <- data.frame(
+  Organism = c("E. coli", "Saprospirales bacterium"),
+  Total_Coding_DNA_bp = c(ecoli_total_bp, sapro_total_bp),
+  Total_Coding_DNA_Mbp = round(c(ecoli_total_bp, sapro_total_bp) / 1e6, 3)
+)
+table_num <- table_num + 1
+```
+**Table `r table_num`: Total coding DNA length**
+```{r}
+total_dna_table
+```
+
+E. coli contains `r round(abs(ecoli_total_bp - sapro_total_bp) / 1e6, 3)` Mbp `r if(ecoli_total_bp > sapro_total_bp) "more" else "fewer"`coding DNA than Saprospirales bacterium. This correlates with the difference in CDS count and may indicate longer or additional genes contributing to its genomic complexity.
+
+### Question 3
+Analyze coding sequence length distribution and compare mean/median values
+```{r}
+# Calculate sequence lengths
+ecoli_lengths <- sapply(cds_ecoli, length)
+sapro_lengths <- sapply(cds_sapro, length)
+
+# Calculate statistics
+ecoli_mean_len <- mean(ecoli_lengths)
+ecoli_median_len <- median(ecoli_lengths)
+sapro_mean_len <- mean(sapro_lengths)
+sapro_median_len <- median(sapro_lengths)
+
+# Create summary table
+length_stats <- data.frame(
+  Organism = c("E. coli", "Saprospirales"),
+  Mean_Length_bp = round(c(ecoli_mean_len, sapro_mean_len), 1),
+  Median_Length_bp = round(c(ecoli_median_len, sapro_median_len), 1),
+  Min_Length_bp = c(min(ecoli_lengths), min(sapro_lengths)),
+  Max_Length_bp = c(max(ecoli_lengths), max(sapro_lengths)),
+  SD_bp = round(c(sd(ecoli_lengths), sd(sapro_lengths)), 1)
+)
+table_num <- table_num + 1
+```
+**Table `r table_num`: Coding sequence length statistics**
+```{r}
+length_stats
+```
+```{r}
+# Create boxplot
+fig_num <- fig_num + 1
+boxplot(ecoli_lengths, sapro_lengths,
+        names = c("E. coli", "Saprospirales"),
+        main = paste0("Figure ", fig_num, ": Coding Sequence Length Distribution"),
+        xlab = "Organism",
+        ylab = "CDS Length (bp)",
+        col = c("lightblue", "lightcoral"),
+        border = "black")
+```
+
+This suggests E. coli coding regions are more uniform in length, while Saprospirales includes both short and unusually long genes.
+
+### Question 4
+Calculate nucleotide and amino acid frequencies with bar plots
+```{r}
+# Calculate nucleotide frequencies for E. coli
+ecoli_nt_counts <- table(unlist(cds_ecoli))
+ecoli_nt_freq <- ecoli_nt_counts / sum(ecoli_nt_counts)
+
+# Calculate nucleotide frequencies for Saprospirales
+sapro_nt_counts <- table(unlist(cds_sapro))
+sapro_nt_freq <- sapro_nt_counts / sum(sapro_nt_counts)
+
+# Calculate GC content
+ecoli_gc <- (ecoli_nt_freq["g"] + ecoli_nt_freq["c"]) * 100
+sapro_gc <- (sapro_nt_freq["g"] + sapro_nt_freq["c"]) * 100
+
+# Create nucleotide frequency table
+nt_freq_table <- data.frame(
+  Organism = c("E. coli", "Saprospirales bacterium"),
+  A = round(c(ecoli_nt_freq["a"], sapro_nt_freq["a"]), 4),
+  T = round(c(ecoli_nt_freq["t"], sapro_nt_freq["t"]), 4),
+  G = round(c(ecoli_nt_freq["g"], sapro_nt_freq["g"]), 4),
+  C = round(c(ecoli_nt_freq["c"], sapro_nt_freq["c"]), 4),
+  GC_Percent = round(c(ecoli_gc, sapro_gc), 2)
+)
+table_num <- table_num + 1
+```
+**Table `r table_num`: Nucleotide frequencies and GC content**
+```{r}
+nt_freq_table
+```
+
+E. coli shows (`r round(abs(ecoli_gc - sapro_gc), 2)`%) `r if(ecoli_gc > sapro_gc) "more" else "fewer"` GC content compared to Saprospirales, indicating a `r if(ecoli_gc > sapro_gc) "more" else "less"` GC-rich genome. This may affect codon choice and adaptations to different environmental conditions, as GC content correlates with factors such as temperature stability and oxygen availability.
+
+```{r}
+# Prepare data matrix for grouped barplot
+nt_freq_matrix <- rbind(
+  ecoli_nt_freq[c("a", "t", "g", "c")],
+  sapro_nt_freq[c("a", "t", "g", "c")]
+)
+rownames(nt_freq_matrix) <- c("E. coli", "Saprospirales")
+colnames(nt_freq_matrix) <- c("A", "T", "G", "C")
+
+# Create grouped barplot
+fig_num <- fig_num + 1
+barplot(nt_freq_matrix,
+        main = paste0("Figure ", fig_num, ": Nucleotide Frequencies Comparison"),
+        xlab = "Nucleotide",
+        ylab = "Frequency",
+        col = c("lightblue", "lightcoral"),
+        beside = TRUE,
+        ylim = c(0, 0.35),
+        border = "black",
+        legend.text = c("E. coli", "Saprospirales"),
+        args.legend = list(x = "topright", bty = "n"))
+
+# Translate to amino acids
+ecoli_proteins <- lapply(cds_ecoli, function(seq) translate(seq, frame = 0, sens = "F", NAstring = "X"))
+sapro_proteins <- lapply(cds_sapro, function(seq) translate(seq, frame = 0, sens = "F", NAstring = "X"))
+
+# Calculate amino acid frequencies for E. coli
+ecoli_aa_counts <- table(unlist(ecoli_proteins))
+ecoli_aa_freq <- ecoli_aa_counts / sum(ecoli_aa_counts)
+
+# Calculate amino acid frequencies for Saprospirales
+sapro_aa_counts <- table(unlist(sapro_proteins))
+sapro_aa_freq <- sapro_aa_counts / sum(sapro_aa_counts)
+
+# Get all amino acids (standard 20 + stop codon)
+all_aa <- c("A", "C", "D", "E", "F", "G", "H", "I", "K", "L", 
+            "M", "N", "P", "Q", "R", "S", "T", "V", "W", "Y", "*")
+
+# Create complete frequency vectors (fill missing with 0)
+ecoli_aa_freq_complete <- sapply(all_aa, function(aa) {
+  ifelse(aa %in% names(ecoli_aa_freq), ecoli_aa_freq[aa], 0)
+})
+
+sapro_aa_freq_complete <- sapply(all_aa, function(aa) {
+  ifelse(aa %in% names(sapro_aa_freq), sapro_aa_freq[aa], 0)
+})
+
+# Prepare data matrix for grouped barplot
+aa_freq_matrix <- rbind(ecoli_aa_freq_complete, sapro_aa_freq_complete)
+rownames(aa_freq_matrix) <- c("E. coli", "Saprospirales")
+colnames(aa_freq_matrix) <- all_aa
+
+# Create grouped barplot
+fig_num <- fig_num + 1
+barplot(aa_freq_matrix,
+        main = paste0("Figure ", fig_num, ": Amino Acid Frequencies Comparison"),
+        xlab = "Amino Acid",
+        ylab = "Frequency",
+        col = c("lightblue", "lightcoral"),
+        beside = TRUE,
+        ylim = c(0, 0.12),
+        border = "black",
+        las = 2,
+        cex.names = 0.7,
+        legend.text = c("E. coli", "Saprospirales"),
+        args.legend = list(x = "topright", bty = "n", cex = 0.8))
+
+# Top 10 most common amino acids:
+cat("E. coli:", names(sort(ecoli_aa_freq, decreasing = TRUE)[1:10]), "\n")
+cat("Saprospirales:", names(sort(sapro_aa_freq, decreasing = TRUE)[1:10]), "\n")
+```
+
+Amino acid profiles are broadly similar, though Saprospirales shows higher proportions of serine and tyrosine, suggesting slight bias in protein composition.
+
+### Question 5
+Generate codon usage table and quantify codon usage bias
+```{r}
+# Calculate codon usage
+ecoli_uco <- lapply(cds_ecoli, uco, index = "eff")
+sapro_uco <- lapply(cds_sapro, uco, index = "eff")
+
+# Pool codon counts across all genes (sum, not average)
+ecoli_uco_total <- Reduce("+", ecoli_uco)
+sapro_uco_total <- Reduce("+", sapro_uco)
+
+# Convert to frequencies (%)
+ecoli_freq <- (ecoli_uco_total / sum(ecoli_uco_total)) * 100
+sapro_freq <- (sapro_uco_total / sum(sapro_uco_total)) * 100
+
+# Create codon usage table
+uco_table <- rbind(
+  "E. coli" = ecoli_freq,
+  "Saprospirales" = sapro_freq
+)
+table_num <- table_num + 1
+```
+**Table `r table_num`: Codon usage frequency (%)**
+```{r}
+uco_table
+```
+
+Calculate RSCU and Identify Codon Bias
+```{r}
+# Define genetic code with amino acid groupings
+genetic_code <- list(
+  "Phe (F)" = c("ttt", "ttc"),
+  "Leu (L)" = c("tta", "ttg", "ctt", "ctc", "cta", "ctg"),
+  "Ile (I)" = c("att", "atc", "ata"),
+  "Met (M)" = c("atg"),
+  "Val (V)" = c("gtt", "gtc", "gta", "gtg"),
+  "Ser (S)" = c("tct", "tcc", "tca", "tcg", "agt", "agc"),
+  "Pro (P)" = c("cct", "ccc", "cca", "ccg"),
+  "Thr (T)" = c("act", "acc", "aca", "acg"),
+  "Ala (A)" = c("gct", "gcc", "gca", "gcg"),
+  "Tyr (Y)" = c("tat", "tac"),
+  "Stop (*)" = c("taa", "tag", "tga"),
+  "His (H)" = c("cat", "cac"),
+  "Gln (Q)" = c("caa", "cag"),
+  "Asn (N)" = c("aat", "aac"),
+  "Lys (K)" = c("aaa", "aag"),
+  "Asp (D)" = c("gat", "gac"),
+  "Glu (E)" = c("gaa", "gag"),
+  "Cys (C)" = c("tgt", "tgc"),
+  "Trp (W)" = c("tgg"),
+  "Arg (R)" = c("cgt", "cgc", "cga", "cgg", "aga", "agg"),
+  "Gly (G)" = c("ggt", "ggc", "gga", "ggg")
+)
+
+# Function to calculate RSCU from codon count table
+calc_rscu <- function(codon_counts) {
+  # Initialize RSCU vector
+  rscu <- setNames(rep(NA, length(codon_counts)), names(codon_counts))
+  
+  # Calculate RSCU for each amino acid family
+  for (aa in names(genetic_code)) {
+    codons <- genetic_code[[aa]]
+    n_syn <- length(codons)  # Number of synonymous codons
+    
+    # Get counts for this amino acid's codons
+    aa_counts <- codon_counts[codons]
+    total_aa <- sum(aa_counts, na.rm = TRUE)
+    
+    if (total_aa > 0) {
+      # RSCU = (observed / total for AA) * number of synonymous codons
+      rscu[codons] <- (aa_counts / total_aa) * n_syn
+    } else {
+      rscu[codons] <- 0
+    }
+  }
+  
+  return(rscu)
+}
+
+# Calculate RSCU from pooled counts
+ecoli_rscu <- calc_rscu(ecoli_uco_total)
+sapro_rscu <- calc_rscu(sapro_uco_total)
+
+# Identify strongly preferred codons (RSCU > 1.5)
+ecoli_preferred <- ecoli_rscu[ecoli_rscu > 1.5 & !is.na(ecoli_rscu)]
+sapro_preferred <- sapro_rscu[sapro_rscu > 1.5 & !is.na(sapro_rscu)]
+
+# Sort by RSCU value (descending)
+ecoli_preferred <- sort(ecoli_preferred, decreasing = TRUE)
+sapro_preferred <- sort(sapro_preferred, decreasing = TRUE)
+```
+
+Codon Bias by Amino Acid Family
+```{r}
+# Create detailed codon bias table by amino acid
+bias_by_aa <- list()
+
+for (aa in names(genetic_code)) {
+  codons <- genetic_code[[aa]]
+  n_syn <- length(codons)
+  
+  if (n_syn > 1) {  # Only include amino acids with synonymous codons
+    aa_data <- data.frame(
+      Amino_Acid = aa,
+      Codon = toupper(codons),
+      E_coli_RSCU = round(ecoli_rscu[codons], 2),
+      Sapro_RSCU = round(sapro_rscu[codons], 2),
+      E_coli_Preferred = ifelse(ecoli_rscu[codons] > 1.5, "**", ""),
+      Sapro_Preferred = ifelse(sapro_rscu[codons] > 1.5, "**", "")
+    )
+    bias_by_aa[[aa]] <- aa_data
+  }
+}
+
+# Combine all amino acids
+codon_bias_table <- do.call(rbind, bias_by_aa)
+rownames(codon_bias_table) <- NULL
+
+table_num <- table_num + 1
+```
+**Table `r table_num`: Codon usage bias within synonymous codon families**
+```{r}
+codon_bias_table
+```
+
+Summary of Most Preferred Codons
+```{r}
+# Create summary showing most preferred codon for each AA
+aa_summary <- data.frame(
+  Amino_Acid = character(),
+  E_coli_Preferred = character(),
+  E_coli_RSCU = numeric(),
+  Sapro_Preferred = character(),
+  Sapro_RSCU = numeric(),
+  Agreement = character(),
+  stringsAsFactors = FALSE
+)
+
+for (aa in names(genetic_code)) {
+  codons <- genetic_code[[aa]]
+  n_syn <- length(codons)
+  
+  if (n_syn > 1) {
+    # Find most preferred codon for each organism
+    ecoli_top <- codons[which.max(ecoli_rscu[codons])]
+    sapro_top <- codons[which.max(sapro_rscu[codons])]
+    
+    agreement <- ifelse(ecoli_top == sapro_top, "Same", "Different")
+    
+    aa_summary <- rbind(aa_summary, data.frame(
+      Amino_Acid = aa,
+      E_coli_Preferred = toupper(ecoli_top),
+      E_coli_RSCU = round(ecoli_rscu[ecoli_top], 2),
+      Sapro_Preferred = toupper(sapro_top),
+      Sapro_RSCU = round(sapro_rscu[sapro_top], 2),
+      Agreement = agreement
+    ))
+  }
+}
+
+table_num <- table_num + 1
+```
+**Table `r table_num`: Most preferred codon for each amino acid**
+```{r}
+aa_summary
+```
+Agreement rate: `r sum(aa_summary$Agreement == "Same")` out of `r nrow(aa_summary)` amino acids (`r round(100*sum(aa_summary$Agreement == "Same")/nrow(aa_summary), 1)`%) show the same preferred codon.
+
+Number of highly preferred codons (RSCU > 1.5):\\
+- E. coli: `r length(ecoli_preferred)`
+- Saprospirales bacterium: `r length(sapro_preferred)`
+
+```{r}
+# Create tables showing preferred codons with their amino acids
+ecoli_pref_df <- data.frame(
+  Codon = toupper(names(ecoli_preferred)),
+  RSCU = round(as.numeric(ecoli_preferred), 2),
+  Amino_Acid = sapply(names(ecoli_preferred), function(codon) {
+    for (aa in names(genetic_code)) {
+      if (codon %in% genetic_code[[aa]]) return(aa)
+    }
+    return(NA)
+  })
+)
+ecoli_pref_df <- ecoli_pref_df[order(-ecoli_pref_df$RSCU), ]
+rownames(ecoli_pref_df) <- NULL
+
+sapro_pref_df <- data.frame(
+  Codon = toupper(names(sapro_preferred)),
+  RSCU = round(as.numeric(sapro_preferred), 2),
+  Amino_Acid = sapply(names(sapro_preferred), function(codon) {
+    for (aa in names(genetic_code)) {
+      if (codon %in% genetic_code[[aa]]) return(aa)
+    }
+    return(NA)
+  })
+)
+sapro_pref_df <- sapro_pref_df[order(-sapro_pref_df$RSCU), ]
+rownames(sapro_pref_df) <- NULL
+```
+E. coli strongly preferred codons:
+```{r}
+ecoli_pref_df
+```
+Saprospirales strongly preferred codons:
+```{r}
+sapro_pref_df
+```
+
+### Question 6
+Identify over- and under-represented protein sequence k-mers and compare across organisms
+
+Number of protein sequences:\\
+- E.coli: `r length(ecoli_proteins)`\\
+- Saprospirales: `r length(sapro_proteins)`\\
+
+Loading library for this question
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(knitr)
+```
+
+Calculate k-mer frequencies
+```{r}
+# Function to extract all k-mers from a protein sequence
+extract_kmers <- function(protein_seq, k) {
+  if (length(protein_seq) < k) return(character(0))
+  
+  kmers <- sapply(1:(length(protein_seq) - k + 1), function(i) {
+    paste(protein_seq[i:(i + k - 1)], collapse = "")
+  })
+  return(kmers)
+}
+
+# Function to count k-mers across all proteins
+count_kmers <- function(protein_list, k) {
+  all_kmers <- unlist(lapply(protein_list, function(prot) {
+    extract_kmers(prot, k)
+  }))
+  
+  kmer_counts <- table(all_kmers)
+  return(kmer_counts)
+}
+
+# Function to calculate amino acid frequencies
+calc_aa_freq <- function(protein_list) {
+  all_aa <- unlist(protein_list)
+  all_aa <- all_aa[all_aa != "*"]  # Remove stop codons
+  aa_freq <- table(all_aa) / length(all_aa)
+  return(aa_freq)
+}
+
+# Function to calculate expected frequency of a k-mer
+calc_expected_freq <- function(kmer, aa_freq) {
+  aa_chars <- strsplit(kmer, "")[[1]]
+  expected <- prod(sapply(aa_chars, function(aa) {
+    if (aa %in% names(aa_freq)) {
+      return(aa_freq[aa])
+    } else {
+      return(1e-10)
+    }
+  }))
+  return(expected)
+}
+
+# Main function to analyze k-mers for one organism
+analyze_kmers <- function(protein_list, k_values = 3:5, organism_name) {
+  # Calculate amino acid frequencies
+  aa_freq <- calc_aa_freq(protein_list)
+  
+  all_results <- list()
+  
+  for (k in k_values) {
+    # Count k-mers
+    kmer_counts <- count_kmers(protein_list, k)
+    total_kmers <- sum(kmer_counts)
+    
+    # Calculate observed and expected frequencies
+    obs_freq <- kmer_counts / total_kmers
+    
+    exp_freq <- sapply(names(kmer_counts), function(kmer) {
+      calc_expected_freq(kmer, aa_freq)
+    })
+    
+    # Calculate enrichment (log2 ratio)
+    enrichment <- log2((obs_freq + 1e-10) / (exp_freq + 1e-10))
+    
+    # Store results
+    results_df <- data.frame(
+      kmer = names(kmer_counts),
+      observed = as.numeric(kmer_counts),
+      obs_freq = as.numeric(obs_freq),
+      exp_freq = as.numeric(exp_freq),
+      enrichment = as.numeric(enrichment),
+      k = k,
+      organism = organism_name,
+      stringsAsFactors = FALSE
+    )
+    
+    all_results[[as.character(k)]] <- results_df
+  }
+  
+  return(do.call(rbind, all_results))
+}
+
+# Analyze both organisms
+cat("Analyzing k-mers for Saprospirales...\n")
+sapro_kmers <- analyze_kmers(sapro_proteins, k_values = 3:5, "Saprospirales")
+
+cat("Analyzing k-mers for E. coli...\n")
+ecoli_kmers <- analyze_kmers(ecoli_proteins, k_values = 3:5, "E. coli")
+```
+
+Identify top 10 over- and under-represented k-mers
+```{r}
+# Get top 10 over-represented k-mers in Saprospirales
+sapro_top_over <- sapro_kmers %>%
+  arrange(desc(enrichment)) %>%
+  head(10)
+
+# Get top 10 under-represented k-mers in Saprospirales
+sapro_top_under <- sapro_kmers %>%
+  arrange(enrichment) %>%
+  head(10)
+
+# Combine for table display
+sapro_top_over$type <- "Over-represented"
+sapro_top_under$type <- "Under-represented"
+
+table_num <- table_num + 1
+```
+**Table `r table_num`: Top 10 over- and under-represented protein k-mers in Saprospirales**
+```{r}
+# Create combined table
+top_kmers_table <- rbind(
+  sapro_top_over[, c("kmer", "k", "observed", "enrichment", "type")],
+  sapro_top_under[, c("kmer", "k", "observed", "enrichment", "type")]
+)
+
+kable(top_kmers_table,
+      digits = 3,
+      row.names = FALSE,
+      col.names = c("K-mer", "Length", "Count", "Log2 Enrichment", "Type"),
+      caption = "Most extreme k-mer enrichments in Saprospirales bacterium")
+```
+
+Compare with E. coli
+```{r}
+# Get the same k-mers from E. coli
+target_kmers <- c(sapro_top_over$kmer, sapro_top_under$kmer)
+
+ecoli_comparison <- ecoli_kmers %>%
+  filter(kmer %in% target_kmers) %>%
+  select(kmer, enrichment, k)
+
+# Merge with Saprospirales data
+comparison_df <- rbind(sapro_top_over, sapro_top_under) %>%
+  select(kmer, enrichment, k, type) %>%
+  rename(enrichment_sapro = enrichment) %>%
+  left_join(ecoli_comparison %>% rename(enrichment_ecoli = enrichment), 
+            by = c("kmer", "k"))
+
+# Replace NA with 0 (k-mer not present or very rare in E. coli)
+comparison_df$enrichment_ecoli[is.na(comparison_df$enrichment_ecoli)] <- 0
+
+table_num <- table_num + 1
+```
+**Table `r table_num`: Comparison of k-mer enrichment between organisms**
+```{r}
+kable(comparison_df,
+      digits = 3,
+      row.names = FALSE,
+      col.names = c("K-mer", "Sapro Enrichment", "Length", "Type", "E. coli Enrichment"),
+      caption = "Enrichment scores for the same k-mers in both organisms")
+```
+
+Visualization 1: Top k-mers in Saprospirales
+```{r}
+# Prepare data for plotting
+plot_data <- rbind(sapro_top_over, sapro_top_under)
+plot_data$kmer <- factor(plot_data$kmer, 
+                         levels = c(sapro_top_over$kmer, rev(sapro_top_under$kmer)))
+
+ggplot(plot_data, aes(x = kmer, y = enrichment, fill = type)) +
+  geom_col(alpha = 0.8) +
+  geom_hline(yintercept = 0, linetype = "solid", color = "black", size = 0.8) +
+  coord_flip() +
+  scale_fill_manual(values = c("Over-represented" = "#E41A1C", 
+                                "Under-represented" = "#377EB8")) +
+  labs(title = "Top 10 Over- and Under-represented K-mers in Saprospirales",
+       subtitle = "K-mer enrichment relative to expected frequency based on amino acid composition",
+       x = "K-mer",
+       y = "Log2 Enrichment Score",
+       fill = "") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "top",
+        panel.grid.major.y = element_blank(),
+        axis.text.y = element_text(family = "mono", size = 10))
+
+fig_num <- fig_num + 1
+```
+Figure `r fig_num`: Most extreme k-mer enrichments in Saprospirales bacterium. Positive values indicate over-representation (more frequent than expected), negative values indicate under-representation (less frequent than expected).
+
+Visualization 2: Direct comparison between organisms
+```{r}
+# Reshape data for side-by-side comparison
+comparison_long <- comparison_df %>%
+  pivot_longer(cols = c(enrichment_sapro, enrichment_ecoli),
+               names_to = "organism",
+               values_to = "enrichment") %>%
+  mutate(organism = recode(organism,
+                          enrichment_sapro = "Saprospirales",
+                          enrichment_ecoli = "E. coli"))
+
+# Order k-mers by Saprospirales enrichment
+comparison_long$kmer <- factor(comparison_long$kmer,
+                               levels = comparison_df$kmer[order(comparison_df$enrichment_sapro)])
+
+ggplot(comparison_long, aes(x = kmer, y = enrichment, fill = organism)) +
+  geom_col(position = "dodge", alpha = 0.8) +
+  geom_hline(yintercept = 0, linetype = "solid", color = "black", size = 0.5) +
+  facet_wrap(~ type, scales = "free_x", ncol = 1) +
+  coord_flip() +
+  scale_fill_manual(values = c("Saprospirales" = "#377EB8", "E. coli" = "#E41A1C")) +
+  labs(title = "K-mer Enrichment Comparison: Saprospirales vs E. coli",
+       subtitle = "Same k-mers evaluated in both organisms",
+       x = "K-mer",
+       y = "Log2 Enrichment Score",
+       fill = "Organism") +
+  theme_minimal(base_size = 11) +
+  theme(legend.position = "top",
+        panel.grid.major.y = element_blank(),
+        axis.text.y = element_text(family = "mono", size = 9),
+        strip.text = element_text(size = 12, face = "bold"))
+
+fig_num <- fig_num + 1
+```
+Figure `r fig_num`: Direct comparison of k-mer enrichment between organisms. K-mers are ordered by their enrichment in Saprospirales.
+
+Visualization 3: Correlation scatter plot
+```{r}
+# Calculate correlation
+cor_result <- cor.test(comparison_df$enrichment_sapro, 
+                       comparison_df$enrichment_ecoli)
+
+# Create scatter plot
+ggplot(comparison_df, aes(x = enrichment_sapro, y = enrichment_ecoli)) +
+  geom_point(aes(color = type, shape = as.factor(k)), size = 4, alpha = 0.7) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", 
+              color = "gray40", size = 1) +
+  geom_hline(yintercept = 0, linetype = "dotted", color = "gray60") +
+  geom_vline(xintercept = 0, linetype = "dotted", color = "gray60") +
+  geom_text(aes(label = kmer), size = 2.5, hjust = -0.1, vjust = -0.5, 
+            family = "mono", check_overlap = TRUE) +
+  scale_color_manual(values = c("Over-represented" = "#E41A1C", 
+                                 "Under-represented" = "#377EB8")) +
+  scale_shape_manual(values = c("3" = 16, "4" = 17, "5" = 15)) +
+  labs(title = "K-mer Enrichment Correlation Between Organisms",
+       subtitle = sprintf("Pearson correlation: r = %.3f, p-value = %s",
+                         cor_result$estimate,
+                         format.pval(cor_result$p.value, digits = 2)),
+       x = "Saprospirales Log2 Enrichment",
+       y = "E. coli Log2 Enrichment",
+       color = "K-mer Type",
+       shape = "K-mer Length") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "right")
+
+fig_num <- fig_num + 1
+```
+Figure `r fig_num`: Correlation between k-mer enrichment in both organisms. Points near the diagonal line show similar patterns. Points in different quadrants indicate opposite enrichment patterns.
+
+Statistical Analysis
+```{r}
+# Calculate agreement statistics
+comparison_df$same_direction <- sign(comparison_df$enrichment_sapro) == 
+                                 sign(comparison_df$enrichment_ecoli)
+
+over_agree <- sum(comparison_df$same_direction[comparison_df$type == "Over-represented"])
+under_agree <- sum(comparison_df$same_direction[comparison_df$type == "Under-represented"])
+
+cat("=== K-mer Enrichment Agreement ===\n\n")
+cat("Correlation between organisms:\n")
+cat("  Pearson r =", round(cor_result$estimate, 3), "\n")
+cat("  P-value =", format.pval(cor_result$p.value, digits = 3), "\n\n")
+
+cat("Directional agreement:\n")
+cat("  Over-represented k-mers:", over_agree, "out of 10",
+    paste0("(", round(100*over_agree/10, 1), "%)"), "\n")
+cat("  Under-represented k-mers:", under_agree, "out of 10",
+    paste0("(", round(100*under_agree/10, 1), "%)"), "\n\n")
+
+# Identify most divergent k-mers
+comparison_df$divergence <- abs(comparison_df$enrichment_sapro - 
+                                comparison_df$enrichment_ecoli)
+most_divergent <- comparison_df %>%
+  arrange(desc(divergence)) %>%
+  head(5)
+
+cat("Most divergent k-mers between organisms:\n")
+for (i in 1:nrow(most_divergent)) {
+  cat(sprintf("  %s: Sapro = %.2f, E. coli = %.2f (diff = %.2f)\n",
+              most_divergent$kmer[i],
+              most_divergent$enrichment_sapro[i],
+              most_divergent$enrichment_ecoli[i],
+              most_divergent$divergence[i]))
+}
+```
+
+Interpretation\\
+Are these k-mers similarly represented in E. coli?\\
+```{r}
+agreement_rate <- round(100 * sum(comparison_df$same_direction) / nrow(comparison_df), 1)
+```
+The analysis reveals `r if(abs(cor_result$estimate) > 0.5) "moderate to strong" else if(abs(cor_result$estimate) > 0.3) "moderate" else "weak"` correlation (r = `r round(cor_result$estimate, 3)`) between k-mer enrichment patterns:
+
+Overall agreement: `r agreement_rate`% of k-mers show the same directional bias (over- or under-represented) in both organisms
+Over-represented k-mers: `r round(100*over_agree/10, 1)`% maintain over-representation in E. coli
+Under-represented k-mers: `r round(100*under_agree/10, 1)`% maintain under-representation in E. coli
+
+`r if(agreement_rate > 70) "This high agreement suggests conserved selective pressures on protein sequences across these bacterial species." else if(agreement_rate > 40) "This moderate agreement indicates some shared but also organism-specific constraints on protein composition." else "This low agreement reveals substantial differences in selective pressures between these organisms."`
+
+Why are these sequences present at different levels?\\
+1. Amino Acid Composition Bias\\
+Different organisms have distinct amino acid usage preferences. This stems from:\\
+- Codon usage bias (as observed in Question 5)\\
+- Metabolic costs of amino acid synthesis\\
+- Environmental adaptations\\
+
+2. Structural Constraints\\
+Under-represented k-mers likely contain:\\
+- Aggregation-prone sequences (e.g., stretches of hydrophobic residues)\\
+- Structurally incompatible amino acid combinations\\
+- Sequences that destabilize protein folds\\
+Over-represented k-mers may include:\\
+- Structurally favorable combinations\\
+- Sequences that promote proper folding\\
+- Common secondary structure motifs (α-helices, β-sheets)\\
+
+3. Functional Requirements\\
+E. coli (enteric bacterium) vs Saprospirales (environmental bacterium) occupy different ecological niches\\
+Different protein repertoires needed for:\\
+- Nutrient acquisition\\
+- Environmental stress response\\
+- Host interactions (for E. coli)\\
+- Saprophytic lifestyle (for Saprospirales)\\
+
+4. Selection Against Specific Motifs\\
+Under-represented sequences may include:\\
+- Protease recognition sites (avoid degradation)\\
+- Post-translational modification sites that would be detrimental\\
+- Sequences that mimic regulatory signals inappropriately\\
+
+5. GC Content and Mutational Bias\\
+The strong codon bias differences (Question 5) directly impact:\\
+- Which codons are used\\
+- Which amino acids are preferentially encoded\\
+- Resulting protein k-mer frequencies\\
+
+6. Taxon-Specific Protein Families\\
+Divergent k-mers likely reflect:\\
+- Organism-specific protein families\\
+- Different abundances of protein domains\\
+- Lineage-specific evolutionary innovations\\
+
+`r if(agreement_rate > 70) "The strong conservation of enrichment patterns suggests these constraints are fundamental to bacterial protein structure and function." else "The divergent patterns highlight how different lifestyles and evolutionary histories shape protein sequence space in distinct ways."`
+
+
+***
+
+# Session Info
+```{r}
+sessionInfo()
+```
